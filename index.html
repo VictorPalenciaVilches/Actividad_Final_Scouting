@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scouting Deportivo · Predicción de talento Élite</title>
+<style>
+  :root {
+    --navy: #14213d;
+    --bg: #f2f4f8;
+    --card: #ffffff;
+    --text: #1d2433;
+    --muted: #667085;
+    --line: #dfe3ea;
+    --accent: #2563eb;
+    --elite: #16a34a;
+    --standard: #d97706;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    background: var(--navy);
+    color: #fff;
+    padding: 28px 20px 24px;
+  }
+  header .wrap { max-width: 960px; margin: 0 auto; }
+  header h1 { margin: 0 0 6px; font-size: 1.6rem; }
+  header p { margin: 0; color: #c7cfe0; font-size: .95rem; }
+  .status {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 14px; padding: 5px 12px; border-radius: 999px;
+    background: rgba(255,255,255,.1); font-size: .82rem;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #9aa3b5; }
+  .dot.ok { background: #34d399; }
+  .dot.fail { background: #f87171; }
+
+  main {
+    max-width: 960px; margin: 24px auto; padding: 0 20px 40px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 22px;
+  }
+  .card h2 { margin: 0 0 16px; font-size: 1.05rem; }
+  label { display: block; font-size: .85rem; font-weight: 600; margin: 14px 0 6px; }
+  label small { font-weight: 400; color: var(--muted); }
+  input, select {
+    width: 100%; padding: 10px 12px; font-size: .95rem;
+    border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--text);
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+  button {
+    margin-top: 20px; width: 100%; padding: 12px; font-size: 1rem; font-weight: 600;
+    border: 0; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer;
+  }
+  button:hover { background: #1d4fd8; }
+  button:disabled { background: #93a8d8; cursor: wait; }
+
+  .placeholder { color: var(--muted); font-size: .95rem; line-height: 1.5; }
+  .error {
+    background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;
+    padding: 12px 14px; border-radius: 8px; font-size: .9rem; margin-top: 12px;
+  }
+  #resultado { display: none; }
+  .player-name { font-size: 1.25rem; font-weight: 700; margin: 0; }
+  .player-meta { color: var(--muted); font-size: .88rem; margin: 4px 0 16px; }
+  .badge {
+    display: inline-block; padding: 6px 16px; border-radius: 999px;
+    font-weight: 700; font-size: 1rem; color: #fff;
+  }
+  .badge.elite { background: var(--elite); }
+  .badge.standard { background: var(--standard); }
+  .prob-label {
+    display: flex; justify-content: space-between; margin: 20px 0 8px;
+    font-size: .88rem; color: var(--muted);
+  }
+  .prob-label strong { color: var(--text); font-size: 1.15rem; }
+  .bar { position: relative; height: 22px; background: #e8ebf1; border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; width: 0; border-radius: 999px; transition: width .9s ease; }
+  .bar-fill.elite { background: var(--elite); }
+  .bar-fill.standard { background: var(--standard); }
+  .bar-mark { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: rgba(20,33,61,.55); }
+  .bar-scale { display: flex; justify-content: space-between; font-size: .75rem; color: var(--muted); margin-top: 6px; }
+  .note { margin-top: 16px; font-size: .82rem; color: var(--muted); line-height: 1.45; }
+  .interp { margin-top: 14px; font-size: .9rem; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>Scouting Deportivo</h1>
+    <p>Predice si un jugador pertenece al Top 25 % de valor de mercado (clase Élite).</p>
+    <div class="status"><span class="dot" id="dot"></span><span id="estadoApi">Conectando con la API…</span></div>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Datos del candidato</h2>
+    <form id="formulario">
+      <label for="jugador">Nombre del jugador</label>
+      <input id="jugador" type="text" placeholder="Ej. Candidato A" maxlength="60">
+
+      <label for="posicion">Posición</label>
+      <select id="posicion" required>
+        <option value="">Cargando posiciones…</option>
+      </select>
+
+      <label for="edad">Edad (años)</label>
+      <input id="edad" type="number" min="14" max="50" step="1" placeholder="Ej. 22" required>
+
+      <label for="estatura">Estatura (cm) <small>· opcional</small></label>
+      <input id="estatura" type="number" min="120" max="230" step="0.1" placeholder="Si se deja vacía se imputa por posición">
+
+      <button type="submit" id="btn">Predecir</button>
+    </form>
+    <div class="error" id="error" style="display:none"></div>
+  </section>
+
+  <section class="card">
+    <h2>Resultado del diagnóstico</h2>
+    <div class="placeholder" id="placeholder">
+      Completa el formulario y pulsa <strong>Predecir</strong>. El resultado y la probabilidad
+      de ser Élite aparecerán aquí.
+    </div>
+
+    <div id="resultado">
+      <p class="player-name" id="rNombre"></p>
+      <p class="player-meta" id="rMeta"></p>
+      <span class="badge" id="rBadge"></span>
+
+      <div class="prob-label">
+        <span>Probabilidad de ser Élite</span>
+        <strong id="rProb"></strong>
+      </div>
+      <div class="bar">
+        <div class="bar-fill" id="rBarra"></div>
+        <div class="bar-mark" title="Umbral de decisión 50 %"></div>
+      </div>
+      <div class="bar-scale"><span>0 %</span><span>Umbral 50 %</span><span>100 %</span></div>
+
+      <p class="interp" id="rInterp"></p>
+      <p class="note" id="rNota"></p>
+    </div>
+  </section>
+</main>
+
+<script>
+  // Dirección de la API (uvicorn main_api:app --reload --port 8001)
+  const API_URL = "http://127.0.0.1:8001";
+
+  const NOMBRES_POSICION = {
+    "Attack": "Delantero",
+    "Defender": "Defensa",
+    "Goalkeeper": "Portero",
+    "Midfield": "Mediocampista",
+    "Missing": "Sin posición registrada",
+    "Sin Posicion": "Sin posición registrada"
+  };
+
+  const $ = (id) => document.getElementById(id);
+  let umbralEur = null;
+
+  async function iniciar() {
+    try {
+      const [estado, pos] = await Promise.all([
+        fetch(API_URL + "/").then(r => r.json()),
+        fetch(API_URL + "/posiciones").then(r => r.json())
+      ]);
+      umbralEur = estado.umbral_elite_eur;
+      $("dot").className = "dot ok";
+      $("estadoApi").textContent = "API conectada · Élite = valor de mercado ≥ " +
+        Number(umbralEur).toLocaleString("es-CO", { maximumFractionDigits: 0 }) + " EUR";
+
+      const sel = $("posicion");
+      sel.innerHTML = '<option value="">Selecciona una posición…</option>';
+      pos.posiciones.forEach(p => {
+        const o = document.createElement("option");
+        o.value = p;
+        o.textContent = NOMBRES_POSICION[p] || p;
+        sel.appendChild(o);
+      });
+    } catch (e) {
+      $("dot").className = "dot fail";
+      $("estadoApi").textContent = "No se pudo conectar con la API en " + API_URL;
+      $("posicion").innerHTML = '<option value="">API no disponible</option>';
+    }
+  }
+
+  function mostrarError(msg) {
+    const box = $("error");
+    box.textContent = msg;
+    box.style.display = msg ? "block" : "none";
+  }
+
+  $("formulario").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    mostrarError("");
+
+    const estatura = $("estatura").value;
+    const cuerpo = {
+      jugador: $("jugador").value.trim() || "Sin nombre",
+      posicion: $("posicion").value,
+      edad: parseInt($("edad").value, 10),
+      estatura_cm: estatura === "" ? null : parseFloat(estatura)
+    };
+
+    const btn = $("btn");
+    btn.disabled = true;
+    btn.textContent = "Analizando…";
+
+    try {
+      const resp = await fetch(API_URL + "/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cuerpo)
+      });
+      const datos = await resp.json();
+      if (!resp.ok) {
+        const detalle = Array.isArray(datos.detail)
+          ? datos.detail.map(d => d.loc.slice(-1)[0] + ": " + d.msg).join(" | ")
+          : datos.detail;
+        throw new Error(detalle || "Error al consultar la API");
+      }
+      mostrarResultado(datos, estatura === "");
+    } catch (e) {
+      mostrarError(e.message || "No se pudo conectar con la API.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Predecir";
+    }
+  });
+
+  function mostrarResultado(d, estaturaImputada) {
+    const esElite = d.prediccion === "Élite";
+    const clase = esElite ? "elite" : "standard";
+
+    $("placeholder").style.display = "none";
+    $("resultado").style.display = "block";
+
+    $("rNombre").textContent = d.jugador;
+    $("rMeta").textContent = (NOMBRES_POSICION[d.posicion] || d.posicion) +
+      " · " + d.edad + " años · " + d.estatura_cm_usada + " cm";
+
+    const badge = $("rBadge");
+    badge.textContent = d.prediccion;
+    badge.className = "badge " + clase;
+
+    $("rProb").textContent = d.probabilidad_elite.toFixed(2) + " %";
+
+    const barra = $("rBarra");
+    barra.className = "bar-fill " + clase;
+    barra.style.width = "0%";
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      barra.style.width = d.probabilidad_elite + "%";
+    }));
+
+    $("rInterp").textContent = esElite
+      ? "El modelo recomienda incluir a este jugador en la lista de seguimiento del área de scouting."
+      : "El modelo no lo identifica como Élite con sus características actuales.";
+
+    $("rNota").textContent = estaturaImputada
+      ? "La estatura no fue informada: se imputó con la mediana de su posición (" + d.estatura_cm_usada + " cm)."
+      : "";
+  }
+
+  iniciar();
+</script>
+</body>
+</html>
